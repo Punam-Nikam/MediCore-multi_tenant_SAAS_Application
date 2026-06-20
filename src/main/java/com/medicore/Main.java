@@ -1,0 +1,56 @@
+package com.medicore;
+
+import com.medicore.auth.AuthHandler;
+import com.medicore.db.DBConnection;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.sql.Connection;
+import java.util.concurrent.Executors;
+
+public class Main
+{
+    // Port number — where our server listens
+    private static final int PORT = 8080;
+
+    public static void main(String[] args) {
+
+        System.out.println("Starting MediCore!");
+        //test database connection
+        try{
+            Connection conn = DBConnection.getConnection();
+
+            if(conn != null){
+                System.out.println("Database connected successfully !!");
+                conn.close();;
+            }
+        } catch(Exception e){
+            System.out.println("Database connection failed : "+e.getMessage());
+            return;
+        }
+
+        //step 2 : create http server
+        try{
+            HttpServer server = HttpServer.create(
+                    new InetSocketAddress(PORT),0
+            );
+
+        //step 3 : Register URL routes
+        //we add handlers here as we build them
+        server.createContext("/api/register", new AuthHandler());
+
+        //step 4 : Give server a thread pool
+        //each request gets its own thread from this pool
+
+        server.setExecutor(Executors.newFixedThreadPool(10));
+
+        //step 5 : start server
+            server.start();
+
+            System.out.println("MediCore running on port : "+PORT);
+            System.out.println("Test : http://localhost:8080");
+
+        }catch(Exception e) {
+            System.out.println("Server failed to start");
+        }
+    }
+}
