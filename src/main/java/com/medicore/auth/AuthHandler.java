@@ -59,11 +59,11 @@ public void handle(HttpExchange exchange) throws IOException {
                 req.getCity()
         );
             System.out.println("Tenant created with id");
-            sendResponse(exchange,201,"{\"error\":\"Tenant created!\",\"tenant id\" : " +tenantId+"}");
 
             UserRepository userRepo = new UserRepository();
 
-            userRepo.insertUser(tenantId,
+            userRepo.insertUser(
+                    tenantId,
                     req.getOwnerName(),
                     req.getEmail(),
                     hashedPassword,
@@ -71,14 +71,13 @@ public void handle(HttpExchange exchange) throws IOException {
                     null);
 
             System.out.println("User created for tenant : " +tenantId);
+            sendResponse(exchange,201,"{\"message\":\"Tenant created!\",\"tenant id\" : " +tenantId+"}");
 
 
         } catch(SQLException e){
             System.out.println("Database error: " + e.getMessage());
             sendResponse(exchange,500,"{\"error\":\"Failed to create tenant!\"}");
         }
-
-
 
     }
 

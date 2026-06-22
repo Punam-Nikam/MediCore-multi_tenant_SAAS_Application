@@ -1,6 +1,7 @@
 package com.medicore;
 
 import com.medicore.auth.AuthHandler;
+import com.medicore.auth.LoginHandler;
 import com.medicore.db.DBConnection;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
@@ -37,7 +38,7 @@ public class Main
         //step 3 : Register URL routes
         //we add handlers here as we build them
         server.createContext("/api/register", new AuthHandler());
-
+        server.createContext("/api/login", new LoginHandler());
         //step 4 : Give server a thread pool
         //each request gets its own thread from this pool
 

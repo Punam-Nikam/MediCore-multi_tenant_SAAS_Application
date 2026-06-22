@@ -4,6 +4,7 @@ import com.medicore.db.DBConnection;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class UserRepository
@@ -25,5 +26,15 @@ public class UserRepository
         ps.executeUpdate();
 
         conn.close();
+    }
+
+    public ResultSet findUserByEmail(String email) throws SQLException {
+        String sql = "SELECT * FROM users WHERE email = ?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, email);
+
+        return ps.executeQuery();
     }
 }
