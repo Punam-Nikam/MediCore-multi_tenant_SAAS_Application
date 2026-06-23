@@ -37,11 +37,11 @@ public class PatientHandler implements HttpHandler {
                 sendResponse(exchange, 500, "{\"error\":\"Cannot inserted user !!\"}");
             }
 
-        } else if (method.equals("GET")) {
+        } else if (method.equals("GET"))
+        {
             int tenantId = TenantContext.getTenantId();
             System.out.println("TenantId being used for query: " + tenantId);
             PatientRepository repo = new PatientRepository();
-
 
             try {
                 List<String> patients = repo.findAllByTenant(tenantId);

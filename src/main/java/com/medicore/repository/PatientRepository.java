@@ -38,13 +38,15 @@ public class PatientRepository {
     public List<String> findAllByTenant(int tenantId) throws SQLException{
 
         String sql = "SELECT * FROM patients WHERE tenant_id = ?";
+
         Connection conn = DBConnection.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, tenantId);
         ResultSet rs = ps.executeQuery();
 
         List<String> patients = new ArrayList<>();
-        while(rs.next()){
+        while(rs.next())
+        {
             int id = rs.getInt("id");
             String name = rs.getString("full_name");
             int age = rs.getInt("age");
@@ -58,5 +60,21 @@ public class PatientRepository {
         }
         conn.close();
         return patients;
+    }
+    public boolean existsByIdAndTenant(int patientId, int tenantId) throws SQLException {
+
+        String sql = "SELECT * FROM patients WHERE id = ? AND tenant_id = ?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setInt(1, patientId);
+        ps.setInt(2, tenantId);
+
+        ResultSet rs = ps.executeQuery();
+
+        boolean exists = rs.next();
+
+        conn.close();
+        return exists;
     }
 }

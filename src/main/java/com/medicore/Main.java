@@ -4,6 +4,7 @@ import com.medicore.auth.AuthHandler;
 import com.medicore.auth.LoginHandler;
 import com.medicore.db.DBConnection;
 import com.medicore.filter.SecuredHandler;
+import com.medicore.invoice.InvoiceHandler;
 import com.medicore.patient.PatientHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
@@ -42,6 +43,7 @@ public class Main
         server.createContext("/api/register", new AuthHandler());
         server.createContext("/api/login", new LoginHandler());
         server.createContext("/api/patients", new SecuredHandler(new PatientHandler()));
+        server.createContext("/api/invoices", new SecuredHandler(new InvoiceHandler()));
         //step 4 : Give server a thread pool
         //each request gets its own thread from this pool
 
