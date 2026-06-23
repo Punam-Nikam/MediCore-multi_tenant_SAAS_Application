@@ -3,6 +3,8 @@ package com.medicore;
 import com.medicore.auth.AuthHandler;
 import com.medicore.auth.LoginHandler;
 import com.medicore.db.DBConnection;
+import com.medicore.filter.SecuredHandler;
+import com.medicore.patient.PatientHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
@@ -39,6 +41,7 @@ public class Main
         //we add handlers here as we build them
         server.createContext("/api/register", new AuthHandler());
         server.createContext("/api/login", new LoginHandler());
+        server.createContext("/api/patients", new SecuredHandler(new PatientHandler()));
         //step 4 : Give server a thread pool
         //each request gets its own thread from this pool
 

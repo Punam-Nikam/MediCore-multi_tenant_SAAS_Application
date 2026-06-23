@@ -30,7 +30,7 @@ public class AuthFilter
 
             TenantContext.set(userId, tenantId, role);
 
-            System.out.println("Authenticated - UserId : " + userId + "tenantId : "+ tenantId +",role : " +role);
+            System.out.println("Authenticated - UserId : " + userId + ", tenantId : "+ tenantId +",role : " +role);
             return true;
 
         } catch (JWTVerificationException e){

@@ -15,7 +15,7 @@ import com.medicore.repository.UserRepository;
 public class AuthHandler implements HttpHandler
 {
     @Override
-public void handle(HttpExchange exchange) throws IOException {
+    public void handle(HttpExchange exchange) throws IOException {
         System.out.println("Request received");
 
         //read incoming JSON from client
@@ -44,7 +44,6 @@ public void handle(HttpExchange exchange) throws IOException {
             return;
         }
         System.out.println("Validation passed!");
-        sendResponse(exchange, 200, "{\"message\":\"Received your request!\"}");
         String hashedPassword = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt(12));
 
         System.out.println("Original password : "+req.getPassword());
