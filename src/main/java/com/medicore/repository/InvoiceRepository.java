@@ -66,4 +66,36 @@ public class InvoiceRepository
         return invoices;
     }
 
+    public void updateRazorpayOrderId(int invoiceId, String orderId) throws SQLException {
+        String sql = "UPDATE invoices SET razorpay_order_id = ? WHERE id =?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+
+        ps.setString(1, orderId);
+        ps.setInt(2, invoiceId);
+
+        ps.executeUpdate();
+        conn.close();
+    }
+
+    public double getAmountByIdAndTenant(int invoiceId, int tenantId) throws SQLException {
+
+        String sql = "SELECT amount FROM invoices WHERE id = ? AND tenant_id =?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+
+        ps.setInt(1, invoiceId);
+        ps.setInt(2, tenantId);
+
+        ResultSet rs =ps.executeQuery();
+
+        double amount = -1;
+        if(rs.next()) {
+            amount = rs.getDouble("amount");
+        }
+        conn.close();
+        return amount;
+    }
 }

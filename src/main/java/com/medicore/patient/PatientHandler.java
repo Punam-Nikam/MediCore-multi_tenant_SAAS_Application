@@ -30,7 +30,7 @@ public class PatientHandler implements HttpHandler {
                         tenantId, req.getName(), req.getAge(), req.getGender(),
                         req.getPhone(), req.getBloodGroup(), req.getComplaint()
                 );
-                System.out.println("Success 201 ");
+//                System.out.println("Success 201 ");
                 sendResponse(exchange, 201, "{\"Success\":\"User inserted successfully ! \"}");
 
             } catch (SQLException e) {
