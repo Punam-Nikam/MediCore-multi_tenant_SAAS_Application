@@ -7,6 +7,8 @@ import com.medicore.filter.SecuredHandler;
 import com.medicore.invoice.InvoiceHandler;
 import com.medicore.patient.PatientHandler;
 import com.medicore.payment.PaymentHandler;
+import com.medicore.payment.RazorpayService;
+import com.medicore.payment.WebhookHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
@@ -45,7 +47,9 @@ public class Main
         server.createContext("/api/login", new LoginHandler());
         server.createContext("/api/patients", new SecuredHandler(new PatientHandler()));
         server.createContext("/api/invoices", new SecuredHandler(new InvoiceHandler()));
-            server.createContext("/api/payments", new SecuredHandler(new PaymentHandler()));
+        server.createContext("/api/payments", new SecuredHandler(new PaymentHandler()));
+        server.createContext("/api/webhook/razorpay", new WebhookHandler());
+
         //step 4 : Give server a thread pool
         //each request gets its own thread from this pool
 
@@ -60,5 +64,18 @@ public class Main
         }catch(Exception e) {
             System.out.println("Server failed to start");
         }
+
+
+        //temporatity tesing code for webhook razorpay payment
+
+//        try {
+//            RazorpayService testService = new RazorpayService();
+//            String testSignature = testService.generateSignature("order_8433e356-589e-43fe-bcab-3af1a89de581");
+//            System.out.println("TEST SIGNATURE: " + testSignature);
+//        } catch (Exception e) {
+//
+//            System.out.println("Error: " + e.getMessage());
+//        }
     }
+
 }

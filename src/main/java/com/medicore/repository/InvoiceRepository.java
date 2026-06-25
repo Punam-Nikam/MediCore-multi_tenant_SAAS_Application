@@ -100,4 +100,18 @@ public class InvoiceRepository
     }
 
 
+    public void markAsPaid(String orderId) throws SQLException {
+        String sql = "UPDATE invoices SET status = ? WHERE razorpay_order_id = ?";
+
+        Connection conn = DBConnection.getConnection();
+
+        PreparedStatement ps = conn.prepareStatement(sql);
+
+        ps.setString(1, "PAID");
+        ps.setString(2, orderId);
+
+        ps.executeUpdate();
+        conn.close();
+    }
+
 }
