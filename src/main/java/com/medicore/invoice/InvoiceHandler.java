@@ -65,7 +65,7 @@ public class InvoiceHandler  implements HttpHandler
                 sendResponse(exchange, 200, json);
 
             } catch (SQLException e) {
-                sendResponse(exchange, 500, "{\"error\":\"Cannot get invoice details ! \"}");
+                sendResponse(exchange, 500, "{\"error\":\"Cannot get invoice details\"}");
 
             }
         }

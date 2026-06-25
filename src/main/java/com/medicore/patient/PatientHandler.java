@@ -16,8 +16,8 @@ public class PatientHandler implements HttpHandler {
     public void handle(HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
 
-        if (method.equals("POST")) {
-
+        if (method.equals("POST"))
+        {
             String body = new String(exchange.getRequestBody().readAllBytes());
             ObjectMapper mapper = new ObjectMapper();
             PatientRequest req = mapper.readValue(body, PatientRequest.class);
@@ -25,22 +25,40 @@ public class PatientHandler implements HttpHandler {
             int tenantId = TenantContext.getTenantId();
             PatientRepository repo = new PatientRepository();
 
+            if (req.getName() == null || req.getName().isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\":\"Name is required\"}");
+                return;
+            }
+
+            if (req.getAge() <= 0 || req.getAge() > 120) {
+                sendResponse(exchange, 400, "{\"error\":\"Valid age is required\"}");
+                return;
+            }
+
+            if (req.getGender() == null || req.getGender().isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\":\"Gender is required\"}");
+                return;
+            }
+
+            if (req.getPhone() == null || req.getPhone().isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\":\"Phone is required\"}");
+                return;
+            }
             try {
                 int patientId = repo.insertPatient(
                         tenantId, req.getName(), req.getAge(), req.getGender(),
                         req.getPhone(), req.getBloodGroup(), req.getComplaint()
                 );
-//                System.out.println("Success 201 ");
-                sendResponse(exchange, 201, "{\"Success\":\"User inserted successfully ! \"}");
 
-            } catch (SQLException e) {
-                sendResponse(exchange, 500, "{\"error\":\"Cannot inserted user !!\"}");
+                sendResponse(exchange, 201, "{\"message\":\"Patient added\",\"patientId\":" + patientId + "}");
+            }
+            catch (SQLException e) {
+                sendResponse(exchange, 500, "{\"error\":\"Failed to add patient\"}");
             }
 
         } else if (method.equals("GET"))
         {
             int tenantId = TenantContext.getTenantId();
-            System.out.println("TenantId being used for query: " + tenantId);
             PatientRepository repo = new PatientRepository();
 
             try {
@@ -49,7 +67,7 @@ public class PatientHandler implements HttpHandler {
                 sendResponse(exchange, 200, json);
 
             } catch (SQLException e) {
-                sendResponse(exchange, 500, "{\"error\":\"Cannot get user response ! \"}");
+                sendResponse(exchange, 500, "{\"error\":\"Cannot get user response\"}");
 
             }
         }

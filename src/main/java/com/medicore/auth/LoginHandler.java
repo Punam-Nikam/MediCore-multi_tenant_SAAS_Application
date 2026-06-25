@@ -58,7 +58,7 @@ public class LoginHandler implements HttpHandler
 
             }catch(SQLException e){
             System.out.println("Database error : "+e.getMessage());
-            sendResponse(exchange, 401, "{\"error\":\"Login failed \"}");
+            sendResponse(exchange, 401, "{\"error\":\"Login failed\"}");
         }
     }
     private void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {

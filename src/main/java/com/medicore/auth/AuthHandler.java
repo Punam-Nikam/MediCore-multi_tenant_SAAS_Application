@@ -16,7 +16,7 @@ public class AuthHandler implements HttpHandler
 {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        System.out.println("Request received");
+        // System.out.println("Request received");
 
         //read incoming JSON from client
         String body = new String(exchange.getRequestBody().readAllBytes());
@@ -28,11 +28,11 @@ public class AuthHandler implements HttpHandler
         //now we can access individual field cleanly
 
         if(req.getClinicName() == null || req.getClinicName().isBlank()){
-            sendResponse(exchange, 400, "{\"error\":\"Clinic name is required!\"}");
+            sendResponse(exchange, 400, "{\"error\":\"Clinic name is required\"}");
             return;
         }
         if(req.getEmail() == null || req.getEmail().isEmpty()){
-            sendResponse(exchange, 400, "{\"error\":\"Email is required!\"}");
+            sendResponse(exchange, 400, "{\"error\":\"Email is required\"}");
             return;
         }
         if (!req.getEmail().contains("@") || !req.getEmail().contains(".")) {
@@ -40,14 +40,14 @@ public class AuthHandler implements HttpHandler
             return;
         }
         if(req.getPassword() == null || req.getPassword().isEmpty() || req.getPassword().length() < 6){
-            sendResponse(exchange, 400, "{\"error\":\"Password must be at least 6 characters!\"}");
+            sendResponse(exchange, 400, "{\"error\":\"Password must be at least 6 characters\"}");
             return;
         }
-        System.out.println("Validation passed!");
+        //System.out.println("Validation passed");
         String hashedPassword = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt(12));
 
-        System.out.println("Original password : "+req.getPassword());
-        System.out.println("Hashed password : "+hashedPassword);
+        // System.out.println("Original password : "+req.getPassword());
+        // System.out.println("Hashed password : "+hashedPassword);
 
         TenantRepository tenantRepo = new TenantRepository();
         try{
@@ -57,7 +57,7 @@ public class AuthHandler implements HttpHandler
                 req.getPhone(),
                 req.getCity()
         );
-            System.out.println("Tenant created with id");
+            // System.out.println("Tenant created with id");
 
             UserRepository userRepo = new UserRepository();
 
@@ -69,13 +69,13 @@ public class AuthHandler implements HttpHandler
                     "OWNER",
                     null);
 
-            System.out.println("User created for tenant : " +tenantId);
-            sendResponse(exchange,201,"{\"message\":\"Tenant created!\",\"tenant id\" : " +tenantId+"}");
+            // System.out.println("User created for tenant : " +tenantId);
+            sendResponse(exchange,201,"{\"message\":\"Tenant created\",\"tenantId\":"+tenantId+"}");
 
 
         } catch(SQLException e){
-            System.out.println("Database error: " + e.getMessage());
-            sendResponse(exchange,500,"{\"error\":\"Failed to create tenant!\"}");
+            //System.out.println("Database error: " + e.getMessage());
+            sendResponse(exchange,500,"{\"error\":\"Failed to create tenant\"}");
         }
 
     }
