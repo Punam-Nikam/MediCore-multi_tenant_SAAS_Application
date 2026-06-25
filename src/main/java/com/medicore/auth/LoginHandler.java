@@ -53,7 +53,7 @@ public class LoginHandler implements HttpHandler
             String role = rs.getString("role");
 
             String token = JwtUtil.createToken(userId, tenantId, role);
-            System.out.println("Login successFul token : "+ token);
+//            System.out.println("Login successFul token : "+ token);
             sendResponse(exchange, 200, "{\"token\":\""+ token + " \"}");
 
             }catch(SQLException e){
