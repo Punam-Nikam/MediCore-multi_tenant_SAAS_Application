@@ -77,4 +77,32 @@ public class PatientRepository {
         conn.close();
         return exists;
     }
+
+    public String findByIdAndTenant(int patientId, int tenantId) throws SQLException {
+
+        String sql = "SELECT * FROM patients WHERE id = ? AND tenant_id = ?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setInt(1, patientId);
+        ps.setInt(2, tenantId);
+
+        ResultSet rs = ps.executeQuery();
+
+        String json = null;
+        if (rs.next()) {
+            int id = rs.getInt("id");
+            String name = rs.getString("full_name");
+            int age = rs.getInt("age");
+            String gender = rs.getString("gender");
+            String phone = rs.getString("phone");
+            String bloodGroup = rs.getString("blood_group");
+            String complaint = rs.getString("complaint");
+
+            json = "{\"id\":" + id + ",\"name\":\"" + name + "\",\"age\":" + age + ",\"gender\":\"" + gender + "\",\"phone\":\"" + phone + "\",\"bloodGroup\":\"" + bloodGroup + "\",\"complaint\":\"" + complaint + "\"}";
+        }
+
+        conn.close();
+        return json;
+    }
 }

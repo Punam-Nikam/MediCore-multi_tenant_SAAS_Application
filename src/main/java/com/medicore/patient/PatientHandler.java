@@ -11,10 +11,14 @@ import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.List;
 
+
 public class PatientHandler implements HttpHandler {
+
+
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
 
         if (method.equals("POST"))
         {
@@ -56,19 +60,37 @@ public class PatientHandler implements HttpHandler {
                 sendResponse(exchange, 500, "{\"error\":\"Failed to add patient\"}");
             }
 
-        } else if (method.equals("GET"))
-        {
+        } else if (method.equals("GET")) {
+
             int tenantId = TenantContext.getTenantId();
             PatientRepository repo = new PatientRepository();
 
+
             try {
-                List<String> patients = repo.findAllByTenant(tenantId);
-                String json = "[" + String.join(",", patients) + "]";
-                sendResponse(exchange, 200, json);
+                if (path.equals("/api/patients")) {
+                    // GET all patients
+                    List<String> patients = repo.findAllByTenant(tenantId);
+                    String json = "[" + String.join(",", patients) + "]";
+                    sendResponse(exchange, 200, json);
+
+                } else {
+                    // GET one patient by ID
+                    String idStr = path.substring("/api/patients/".length());
+                    int patientId = Integer.parseInt(idStr);
+
+                    String json = repo.findByIdAndTenant(patientId, tenantId);
+
+                    if (json == null) {
+                        sendResponse(exchange, 404, "{\"error\":\"Patient not found\"}");
+                    } else {
+                        sendResponse(exchange, 200, json);
+                    }
+                }
 
             } catch (SQLException e) {
-                sendResponse(exchange, 500, "{\"error\":\"Cannot get user response\"}");
-
+                sendResponse(exchange, 500, "{\"error\":\"Cannot get patient data\"}");
+            } catch (NumberFormatException e) {
+                sendResponse(exchange, 400, "{\"error\":\"Invalid patient id\"}");
             }
         }
             else{
