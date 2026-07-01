@@ -14,7 +14,6 @@ import java.util.List;
 
 public class PatientHandler implements HttpHandler {
 
-
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
@@ -93,7 +92,59 @@ public class PatientHandler implements HttpHandler {
                 sendResponse(exchange, 400, "{\"error\":\"Invalid patient id\"}");
             }
         }
-            else{
+        else if (method.equals("DELETE")) {
+
+            int tenantId = TenantContext.getTenantId();
+            PatientRepository repo = new PatientRepository();
+
+            try {
+                String idStr = path.substring("/api/patients/".length());
+                int patientId = Integer.parseInt(idStr);
+
+                boolean deleted = repo.deletePatient(patientId, tenantId);
+
+                if (deleted) {
+                    sendResponse(exchange, 200, "{\"message\":\"Patient deleted\"}");
+                } else {
+                    sendResponse(exchange, 404, "{\"error\":\"Patient not found\"}");
+                }
+
+            } catch (SQLException e) {
+                sendResponse(exchange, 500, "{\"error\":\"Cannot delete patient\"}");
+            } catch (NumberFormatException e) {
+                sendResponse(exchange, 400, "{\"error\":\"Invalid patient id\"}");
+            }
+        } else if (method.equals("PUT")) {
+
+            int tenantId = TenantContext.getTenantId();
+            PatientRepository repo = new PatientRepository();
+
+            String body = new String(exchange.getRequestBody().readAllBytes());
+            ObjectMapper mapper = new ObjectMapper();
+            PatientRequest req = mapper.readValue(body, PatientRequest.class);
+
+            try {
+                String idStr = path.substring("/api/patients/".length());
+                int patientId = Integer.parseInt(idStr);
+
+                boolean updated = repo.updatePatient(
+                        patientId, tenantId, req.getName(), req.getAge(),
+                        req.getGender(), req.getPhone(), req.getBloodGroup(), req.getComplaint()
+                );
+
+                if (updated) {
+                    sendResponse(exchange, 200, "{\"message\":\"Patient updated\"}");
+                } else {
+                    sendResponse(exchange, 404, "{\"error\":\"Patient not found\"}");
+                }
+
+            } catch (SQLException e) {
+                sendResponse(exchange, 500, "{\"error\":\"Cannot update patient\"}");
+            } catch (NumberFormatException e) {
+                sendResponse(exchange, 400, "{\"error\":\"Invalid patient id\"}");
+            }
+        }
+        else{
                 sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
             }
         }

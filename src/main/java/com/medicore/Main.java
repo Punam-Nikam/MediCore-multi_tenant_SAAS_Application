@@ -13,6 +13,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.util.concurrent.Executors;
+import com.medicore.filter.CorsFilter;
 
 public class Main
 {
@@ -43,12 +44,12 @@ public class Main
 
         //step 3 : Register URL routes
         //we add handlers here as we build them
-        server.createContext("/api/register", new AuthHandler());
-        server.createContext("/api/login", new LoginHandler());
-        server.createContext("/api/patients", new SecuredHandler(new PatientHandler()));
-        server.createContext("/api/invoices", new SecuredHandler(new InvoiceHandler()));
-        server.createContext("/api/payments", new SecuredHandler(new PaymentHandler()));
-        server.createContext("/api/webhook/razorpay", new WebhookHandler());
+            server.createContext("/api/register", new CorsFilter(new AuthHandler()));
+            server.createContext("/api/login", new CorsFilter(new LoginHandler()));
+            server.createContext("/api/patients", new CorsFilter(new SecuredHandler(new PatientHandler())));
+            server.createContext("/api/invoices", new CorsFilter(new SecuredHandler(new InvoiceHandler())));
+            server.createContext("/api/payments", new CorsFilter(new SecuredHandler(new PaymentHandler())));
+            server.createContext("/api/webhook/razorpay", new CorsFilter(new WebhookHandler()));
 
         //step 4 : Give server a thread pool
         //each request gets its own thread from this pool

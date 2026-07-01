@@ -105,4 +105,39 @@ public class PatientRepository {
         conn.close();
         return json;
     }
+
+    public boolean deletePatient(int patientId, int tenantId) throws SQLException {
+
+        String sql = "DELETE FROM patients WHERE id = ? AND tenant_id = ?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setInt(1, patientId);
+        ps.setInt(2, tenantId);
+
+        int rowsAffected = ps.executeUpdate();
+
+        conn.close();
+        return rowsAffected > 0;
+    }
+
+    public boolean updatePatient(int patientId, int tenantId, String name, int age, String gender, String phone, String bloodGroup, String complaint) throws SQLException {
+
+        String sql = "UPDATE patients SET full_name=?, age=?, gender=?, phone=?, blood_group=?, complaint=? WHERE id=? AND tenant_id=?";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, name);
+        ps.setInt(2, age);
+        ps.setString(3, gender);
+        ps.setString(4, phone);
+        ps.setString(5, bloodGroup);
+        ps.setString(6, complaint);
+        ps.setInt(7, patientId);
+        ps.setInt(8, tenantId);
+
+        int rowsAffected = ps.executeUpdate();
+        conn.close();
+        return rowsAffected > 0;
+    }
 }
