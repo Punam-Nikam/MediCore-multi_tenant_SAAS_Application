@@ -8,7 +8,7 @@ public class DBConnection
 {
     private static final String DB_URL = "jdbc:mysql://localhost:3306/medicore_db";
     private static final String DB_USER = "root";
-    private static final String DB_PASS = "mypass";
+    private static final String DB_PASS = "yourpass";
     private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
 
 //    Returns a fresh connection to MySQL database
