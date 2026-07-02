@@ -8,6 +8,7 @@ import com.medicore.invoice.InvoiceHandler;
 import com.medicore.patient.PatientHandler;
 import com.medicore.payment.PaymentHandler;
 import com.medicore.payment.RazorpayService;
+import com.medicore.payment.SignatureHandler;
 import com.medicore.payment.WebhookHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
@@ -50,6 +51,7 @@ public class Main
             server.createContext("/api/invoices", new CorsFilter(new SecuredHandler(new InvoiceHandler())));
             server.createContext("/api/payments", new CorsFilter(new SecuredHandler(new PaymentHandler())));
             server.createContext("/api/webhook/razorpay", new CorsFilter(new WebhookHandler()));
+            server.createContext("/api/webhook/sign", new CorsFilter(new SignatureHandler()));
 
         //step 4 : Give server a thread pool
         //each request gets its own thread from this pool
