@@ -1,51 +1,58 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
+import '../styles/Auth.css';
 
 function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     async function handleLogin() {
-        if (!email || !password) { setError("All fields required"); return; }
-        setLoading(true);
-        setError("");
+        if (!email || !password) { setError('Email and password are required'); return; }
+        setLoading(true); setError('');
         const result = await login(email, password);
         setLoading(false);
         if (result.token) {
-            localStorage.setItem("token", result.token);
+            localStorage.setItem('token', result.token);
             navigate('/dashboard');
         } else {
-            setError(result.error || "Login failed");
+            setError(result.error || 'Invalid email or password');
         }
     }
 
+    function handleKeyDown(e) {
+        if (e.key === 'Enter') handleLogin();
+    }
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
-                <h1 className="text-2xl font-bold text-blue-600 mb-1">MediCore</h1>
-                <h2 className="text-xl font-semibold text-gray-800 mb-6">Welcome back</h2>
+        <div className="auth-page">
+            <div className="auth-card">
+                <div className="auth-logo"><span>M</span> MediCore</div>
+                <h1 className="auth-title">Welcome back</h1>
+                <p className="auth-subtitle">Sign in to your clinic account</p>
 
-                {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg mb-4">{error}</div>}
+                {error && <div className="auth-error">{error}</div>}
 
-                <div className="flex flex-col gap-4">
-                    <input type="email" placeholder="Email address"
-                           value={email} onChange={(e) => setEmail(e.target.value)}
-                           className="border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none focus:border-blue-400" />
-                    <input type="password" placeholder="Password"
-                           value={password} onChange={(e) => setPassword(e.target.value)}
-                           className="border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none focus:border-blue-400" />
-                    <button onClick={handleLogin} disabled={loading}
-                            className="bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">
-                        {loading ? "Logging in..." : "Login"}
-                    </button>
+                <div className="form-group">
+                    <label className="form-label">Email address</label>
+                    <input className="form-input" type="email" placeholder="clinic@example.com"
+                           value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown} />
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <input className="form-input" type="password" placeholder="••••••••"
+                           value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown} />
                 </div>
 
-                <p className="text-center text-sm text-gray-500 mt-4">
-                    Don't have an account? <Link to="/register" className="text-blue-600 font-medium">Register</Link>
+                <button className="btn-full" onClick={handleLogin} disabled={loading}>
+                    {loading ? 'Signing in...' : 'Sign in'}
+                </button>
+
+                <p className="auth-link">
+                    Don't have an account? <Link to="/register">Create one free</Link>
                 </p>
             </div>
         </div>

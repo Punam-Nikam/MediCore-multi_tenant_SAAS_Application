@@ -1,62 +1,73 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { register } from '../api/auth';
+import '../styles/Auth.css';
 
 function Register() {
-    const [form, setForm] = useState({ clinicName: "", ownerName: "", email: "", password: "", phone: "", city: "" });
-    const [error, setError] = useState("");
+    const [form, setForm] = useState({ clinicName:'', ownerName:'', email:'', password:'', phone:'', city:'' });
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    function handleChange(e) {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    }
+    const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
     async function handleRegister() {
-        if (!form.clinicName || !form.email || !form.password) {
-            setError("Clinic name, email and password are required"); return;
+        if (!form.clinicName || !form.ownerName || !form.email || !form.password) {
+            setError('Clinic name, your name, email and password are required'); return;
         }
-        setLoading(true);
-        setError("");
+        if (form.password.length < 6) { setError('Password must be at least 6 characters'); return; }
+        setLoading(true); setError('');
         const result = await register(form);
         setLoading(false);
-        if (result.message) {
+        if (result.message || result.tenantId) {
             navigate('/login');
         } else {
-            setError(result.error || "Registration failed");
+            setError(result.error || 'Registration failed');
         }
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center py-8">
-            <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
-                <h1 className="text-2xl font-bold text-blue-600 mb-1">MediCore</h1>
-                <h2 className="text-xl font-semibold text-gray-800 mb-6">Create your clinic account</h2>
+        <div className="auth-page">
+            <div className="auth-card">
+                <div className="auth-logo"><span>M</span> MediCore</div>
+                <h1 className="auth-title">Create your account</h1>
+                <p className="auth-subtitle">Set up your clinic on MediCore for free</p>
 
-                {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg mb-4">{error}</div>}
+                {error && <div className="auth-error">{error}</div>}
 
-                <div className="flex flex-col gap-3">
-                    {[
-                        { name: "clinicName", placeholder: "Clinic Name", type: "text" },
-                        { name: "ownerName", placeholder: "Your Full Name", type: "text" },
-                        { name: "email", placeholder: "Email Address", type: "email" },
-                        { name: "password", placeholder: "Password (min 6 chars)", type: "password" },
-                        { name: "phone", placeholder: "Phone Number", type: "text" },
-                        { name: "city", placeholder: "City", type: "text" },
-                    ].map((field) => (
-                        <input key={field.name} type={field.type} name={field.name}
-                               placeholder={field.placeholder} value={form[field.name]}
-                               onChange={handleChange}
-                               className="border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none focus:border-blue-400" />
-                    ))}
-                    <button onClick={handleRegister} disabled={loading}
-                            className="bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">
-                        {loading ? "Creating account..." : "Create Account"}
-                    </button>
+                <div className="form-grid">
+                    <div className="form-group">
+                        <label className="form-label">Clinic name *</label>
+                        <input className="form-input" placeholder="e.g. City Care Clinic" value={form.clinicName} onChange={set('clinicName')} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Your name *</label>
+                        <input className="form-input" placeholder="Dr. Full Name" value={form.ownerName} onChange={set('ownerName')} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Email address *</label>
+                        <input className="form-input" type="email" placeholder="you@clinic.com" value={form.email} onChange={set('email')} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Password *</label>
+                        <input className="form-input" type="password" placeholder="Min 6 characters" value={form.password} onChange={set('password')} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Phone</label>
+                        <input className="form-input" placeholder="9876543210" value={form.phone} onChange={set('phone')} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">City</label>
+                        <input className="form-input" placeholder="Mumbai" value={form.city} onChange={set('city')} />
+                    </div>
                 </div>
 
-                <p className="text-center text-sm text-gray-500 mt-4">
-                    Already have an account? <Link to="/login" className="text-blue-600 font-medium">Login</Link>
+                <button className="btn-full" onClick={handleRegister} disabled={loading}>
+                    {loading ? 'Creating account...' : 'Create clinic account'}
+                </button>
+
+                <p className="auth-link">
+                    Already have an account? <Link to="/login">Sign in</Link>
                 </p>
             </div>
         </div>
