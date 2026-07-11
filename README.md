@@ -227,6 +227,6 @@ Built as a learning project to deeply understand:
 
 ---
 ## ✅ Summary
- 
+
 This project demonstrates a real-world SaaS pattern: **shared infrastructure, isolated data**, backed by industry-standard security practices (hashing, JWT, prepared statements, webhook verification) and a clean payment lifecycle.
----
+
