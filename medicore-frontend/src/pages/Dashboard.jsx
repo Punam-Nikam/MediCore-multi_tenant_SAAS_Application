@@ -4,75 +4,84 @@ import { getPatients, addPatient, deletePatient } from '../api/patients';
 import { getInvoices, createInvoice, createPayment, simulateWebhook } from '../api/invoices';
 import '../styles/Dashboard.css';
 
-function getInitials(name) {
-    if (!name) return '?';
-    return name.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
+const BASE = 'http://localhost:8080';
+const gh = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
 
-function PaymentModal({ invoice, patient, onClose, onSuccess }) {
+const ini = n => n ? n.trim().split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : '?';
+const cols = ['#3b82f6', '#7c3aed', '#059669', '#dc2626', '#d97706', '#0891b2', '#be185d'];
+const ac = id => cols[id % cols.length];
+
+//  Payment Modal
+function PayModal({ inv, pat, onClose, onDone }) {
     const [stage, setStage] = useState('confirm');
     const [loading, setLoading] = useState(false);
 
-    async function handlePay() {
+    async function payOnline() {
         setLoading(true);
-        const orderResult = await createPayment(invoice.id);
-        if (!orderResult.orderId) {
-            alert('Failed to create payment order'); setLoading(false); return;
+        try {
+            const r = await createPayment(inv.id);
+            if (!r.orderId) { alert('Could not create payment order — check backend console'); setLoading(false); return; }
+            const w = await simulateWebhook(r.orderId);
+            if (w.ok) { setStage('done'); setTimeout(() => { onDone('online'); onClose(); }, 1800); }
+            else alert('Payment simulation failed — check if /api/webhook/sign is registered in Main.java');
+        } catch (e) {
+            alert('Network error: ' + e.message);
         }
-        const webhookResult = await simulateWebhook(orderResult.orderId);
         setLoading(false);
-        if (webhookResult.ok) {
-            setStage('success');
-            setTimeout(() => { onSuccess(); onClose(); }, 2000);
-        } else {
-            alert('Payment simulation failed');
+    }
+
+    async function payCash() {
+        setLoading(true);
+        try {
+            const res = await fetch(`${BASE}/api/invoices/${inv.id}/cash-paid`, {
+                method: 'POST', headers: gh()
+            });
+            const data = await res.json();
+            if (data.message) { setStage('done'); setTimeout(() => { onDone('cash'); onClose(); }, 1800); }
+            else alert(data.error || 'Failed to mark as cash paid');
+        } catch (e) {
+            alert('Network error: ' + e.message);
         }
+        setLoading(false);
     }
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="ov" onClick={onClose}>
+            <div className="mod" onClick={e => e.stopPropagation()}>
                 {stage === 'confirm' ? (
                     <>
-                        <div className="modal-header">
-                            <div className="modal-icon">💳</div>
-                            <div className="modal-title">Complete payment</div>
-                            <div className="modal-subtitle">Review invoice before paying</div>
+
+                        <div className="mod-t">Complete your payment</div>
+                        <div className="mod-s">Choose payment method for this invoice</div>
+                        <div className="mod-rows">
+                            <div className="mod-row"><span className="mod-rl">Patient</span><span className="mod-rv">{pat?.name || '—'}</span></div>
+                            <div className="mod-row"><span className="mod-rl">Invoice #</span><span className="mod-rv">{inv.id}</span></div>
+                            <div className="mod-row"><span className="mod-rl">Description</span><span className="mod-rv">{inv.description}</span></div>
                         </div>
-                        <div className="modal-details">
-                            <div className="modal-detail-row">
-                                <span className="modal-detail-label">Patient</span>
-                                <span className="modal-detail-value">{patient?.name || 'Unknown'}</span>
-                            </div>
-                            <div className="modal-detail-row">
-                                <span className="modal-detail-label">Invoice #</span>
-                                <span className="modal-detail-value">{invoice.id}</span>
-                            </div>
-                            <div className="modal-detail-row">
-                                <span className="modal-detail-label">Description</span>
-                                <span className="modal-detail-value">{invoice.description}</span>
-                            </div>
-                            <div className="modal-detail-row">
-                                <span className="modal-detail-label">Status</span>
-                                <span className="modal-detail-value" style={{ color: '#d97706' }}>PENDING</span>
-                            </div>
+                        <div className="mod-amt">
+                            <div className="mod-amt-l">Total amount</div>
+                            <div className="mod-amt-v">₹{inv.amount}</div>
                         </div>
-                        <div className="modal-amount">
-                            <div className="modal-amount-label">Total amount</div>
-                            <div className="modal-amount-value">₹{invoice.amount}</div>
-                        </div>
-                        <div className="modal-actions">
-                            <button className="btn-pay-cancel" onClick={onClose}>Cancel</button>
-                            <button className="btn-pay-success" onClick={handlePay} disabled={loading}>
-                                {loading ? 'Processing...' : '✓ Confirm payment'}
+                        <div style={{ marginBottom: '10px' }}>
+                            <button className="mod-ok" onClick={payOnline} disabled={loading}
+                                    style={{ width: '100%', marginBottom: '8px', background: '#3b82f6' }}>
+                                {loading ? 'Processing...' : ' Pay online(Razorpay Payment)'}
+                            </button>
+                            <button className="mod-ok" onClick={payCash} disabled={loading}
+                                    style={{ width: '100%', background: '#16a34a' }}>
+                                {loading ? 'Processing...' : ' Pay by Cash'}
                             </button>
                         </div>
+                        <button className="mod-cx" onClick={onClose} style={{ width: '100%' }}>Cancel</button>
                     </>
                 ) : (
-                    <div className="modal-success">
-                        <div className="modal-success-icon">✅</div>
-                        <div className="modal-success-title">Payment successful!</div>
-                        <div className="modal-success-sub">Invoice #{invoice.id} has been marked as PAID</div>
+                    <div className="suc">
+
+                        <div className="suc-t">Payment confirmed!</div>
+                        <div className="suc-s">Invoice #{inv.id} is now marked as PAID</div>
                     </div>
                 )}
             </div>
@@ -80,387 +89,481 @@ function PaymentModal({ invoice, patient, onClose, onSuccess }) {
     );
 }
 
-function Dashboard() {
+// Edit Modal
+function EditModal({ pat, onClose, onDone }) {
+    const [f, setF] = useState({ ...pat });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const set = k => e => setF({ ...f, [k]: e.target.value });
+
+    async function save() {
+        if (!f.name || !f.phone) { setError('Name and phone are required'); return; }
+        setLoading(true); setError('');
+        try {
+            const res = await fetch(`${BASE}/api/patients/${pat.id}`, {
+                method: 'PUT',
+                headers: gh(),
+                body: JSON.stringify({ ...f, age: parseInt(f.age) || 0 })
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                setError('Server error: ' + text);
+                setLoading(false); return;
+            }
+
+            const data = await res.json();
+            if (data.message) { onDone(); onClose(); }
+            else { setError(data.error || 'Update failed'); }
+        } catch (e) {
+            setError('Network error — is backend running? ' + e.message);
+        }
+        setLoading(false);
+    }
+
+    return (
+        <div className="ov" onClick={onClose}>
+            <div className="mod mod-wide" onClick={e => e.stopPropagation()}>
+                <div className="mod-t" style={{ textAlign: 'left', marginBottom: '4px' }}>Edit patient</div>
+                <div className="mod-s" style={{ textAlign: 'left', marginBottom: '16px' }}>Update patient information</div>
+
+                {error && (
+                    <div style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px' }}>
+                        {error}
+                    </div>
+                )}
+
+                <div className="fg">
+                    <div><label className="fl">Full name *</label><input className="fi" value={f.name || ''} onChange={set('name')} /></div>
+                    <div><label className="fl">Age *</label><input className="fi" type="number" value={f.age || ''} onChange={set('age')} /></div>
+                    <div><label className="fl">Phone *</label><input className="fi" value={f.phone || ''} onChange={set('phone')} /></div>
+                    <div>
+                        <label className="fl">Gender</label>
+                        <select className="fi" value={f.gender || 'MALE'} onChange={set('gender')}>
+                            <option value="MALE">Male</option>
+                            <option value="FEMALE">Female</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    <div><label className="fl">Blood group</label><input className="fi" value={f.bloodGroup || ''} onChange={set('bloodGroup')} /></div>
+                    <div><label className="fl">Complaint</label><input className="fi" value={f.complaint || ''} onChange={set('complaint')} /></div>
+                </div>
+
+                <div className="mod-btns" style={{ marginTop: '16px' }}>
+                    <button className="mod-cx" onClick={onClose}>Cancel</button>
+                    <button className="mod-ok" onClick={save} disabled={loading}>
+                        {loading ? 'Saving...' : 'Save changes'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+//  Main Dashboard
+export default function Dashboard() {
     const [tab, setTab] = useState('patients');
     const [patients, setPatients] = useState([]);
     const [invoices, setInvoices] = useState([]);
-    const [showAddPatient, setShowAddPatient] = useState(false);
-    const [showAddInvoice, setShowAddInvoice] = useState(false);
-    const [payingInvoice, setPayingInvoice] = useState(null);
-    const [patientSearch, setPatientSearch] = useState('');
-    const [invoiceFilter, setInvoiceFilter] = useState('ALL');
-    const [patientForm, setPatientForm] = useState({ name:'', age:'', gender:'MALE', phone:'', bloodGroup:'', complaint:'' });
-    const [invoiceForm, setInvoiceForm] = useState({ patientId:'', description:'', amount:'' });
-    const [msg, setMsg] = useState({ text:'', type:'' });
-    const navigate = useNavigate();
+    const [showAdd, setShowAdd] = useState(false);
+    const [payInv, setPayInv] = useState(null);
+    const [editPat, setEditPat] = useState(null);
+    const [pSearch, setPSearch] = useState('');
+    const [iSearch, setISearch] = useState('');
+    const [iFilter, setIFilter] = useState('ALL');
+    const [pf, setPf] = useState({ name: '', age: '', gender: 'MALE', phone: '', bloodGroup: '', complaint: '' });
+    const [invf, setInvf] = useState({ patientId: '', description: '', amount: '' });
+    const [msg, setMsg] = useState({ t: '', ok: true });
+    const nav = useNavigate();
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/login'); return; }
-        loadAll();
+        if (!localStorage.getItem('token')) { nav('/login'); return; }
+        load();
     }, []);
 
-    async function loadAll() {
-        const [p, inv] = await Promise.all([getPatients(), getInvoices()]);
-        if (Array.isArray(p)) setPatients(p);
-        if (Array.isArray(inv)) setInvoices(inv);
-    }
-
-    function showMsg(text, type = 'success') {
-        setMsg({ text, type });
-        setTimeout(() => setMsg({ text:'', type:'' }), 3500);
-    }
-
-    async function handleAddPatient() {
-        if (!patientForm.name || !patientForm.age || !patientForm.phone) {
-            showMsg('Name, age and phone are required', 'error'); return;
-        }
-        const result = await addPatient({ ...patientForm, age: parseInt(patientForm.age) });
-        if (result.patientId) {
-            showMsg('Patient added successfully');
-            setShowAddPatient(false);
-            setPatientForm({ name:'', age:'', gender:'MALE', phone:'', bloodGroup:'', complaint:'' });
-            loadAll();
-        } else {
-            showMsg(result.error || 'Failed to add patient', 'error');
+    async function load() {
+        try {
+            const [p, i] = await Promise.all([getPatients(), getInvoices()]);
+            if (Array.isArray(p)) setPatients(p);
+            if (Array.isArray(i)) setInvoices(i);
+        } catch (e) {
+            flash('Failed to load data', false);
         }
     }
 
-    async function handleDeletePatient(id, name) {
-        if (!window.confirm(`Delete patient "${name}"? This cannot be undone.`)) return;
-        const result = await deletePatient(id);
-        if (result.message) {
-            showMsg('Patient deleted');
-            loadAll();
-        } else {
-            showMsg(result.error || 'Failed to delete', 'error');
-        }
+    function flash(t, ok = true) {
+        setMsg({ t, ok });
+        setTimeout(() => setMsg({ t: '', ok: true }), 3500);
     }
 
-    async function handleAddInvoice() {
-        if (!invoiceForm.patientId || !invoiceForm.description || !invoiceForm.amount) {
-            showMsg('All fields are required', 'error'); return;
+    async function doAddPat() {
+        if (!pf.name || !pf.age || !pf.phone) { flash('Name, age and phone required', false); return; }
+        try {
+            const r = await addPatient({ ...pf, age: parseInt(pf.age) });
+            if (r.patientId) {
+                flash('Patient added successfully');
+                setShowAdd(false);
+                setPf({ name: '', age: '', gender: 'MALE', phone: '', bloodGroup: '', complaint: '' });
+                load();
+            } else { flash(r.error || 'Failed to add patient', false); }
+        } catch (e) { flash('Network error', false); }
+    }
+
+    async function doDelPat(id, name) {
+        const patientInvoices = invoices.filter(inv => inv.patientId === id);
+
+        if (patientInvoices.length > 0) {
+            alert(`Cannot delete "${name}" — this patient has ${patientInvoices.length} invoice(s) on record. Please delete their invoices first.`, false);
+            return;
         }
-        if (parseFloat(invoiceForm.amount) <= 0) {
-            showMsg('Amount must be greater than zero', 'error'); return;
-        }
-        const result = await createInvoice({
-            patientId: parseInt(invoiceForm.patientId),
-            description: invoiceForm.description,
-            amount: parseFloat(invoiceForm.amount)
+
+        if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+
+        try {
+            const res = await fetch(`${BASE}/api/patients/${id}`, {
+                method: 'DELETE', headers: gh()
+            });
+            const data = await res.json();
+            if (data.message) { flash(`"${name}" deleted successfully`); load(); }
+            else flash(data.error || 'Failed to delete', false);
+        } catch (e) { flash('Network error', false); }
+    }
+
+    async function doAddInv() {
+        if (!invf.patientId || !invf.description || !invf.amount) { flash('All fields required', false); return; }
+        if (parseFloat(invf.amount) <= 0) { flash('Amount must be greater than 0', false); return; }
+        try {
+            const r = await createInvoice({
+                patientId: parseInt(invf.patientId),
+                description: invf.description,
+                amount: parseFloat(invf.amount)
+            });
+            if (r.invoiceId) {
+                flash('Invoice created');
+                setShowAdd(false);
+                setInvf({ patientId: '', description: '', amount: '' });
+                load();
+            } else { flash(r.error || 'Failed to create invoice', false); }
+        } catch (e) { flash('Network error', false); }
+    }
+
+    function printInvoice(inv) {
+        const pat = patients.find(p => p.id === inv.patientId);
+        localStorage.setItem('print_invoice', JSON.stringify(inv));
+        localStorage.setItem('print_patient', JSON.stringify(pat));
+        window.open('/print-invoice', '_blank');
+    }
+
+    const revenue = invoices.filter(i => i.status === 'PAID').reduce((s, i) => s + i.amount, 0);
+    const pending = invoices.filter(i => i.status === 'PENDING').length;
+
+    const fp = patients.filter(p =>
+        (p.name?.toLowerCase().includes(pSearch.toLowerCase())) ||
+        (p.phone?.includes(pSearch))
+    );
+
+    const fi = invoices
+        .filter(i => iFilter === 'ALL' || i.status === iFilter)
+        .filter(i => {
+            if (!iSearch) return true;
+            const p = patients.find(x => x.id === i.patientId);
+            return p?.name?.toLowerCase().includes(iSearch.toLowerCase());
+        })
+        .sort((a, b) => {
+            const pa = patients.find(p => p.id === a.patientId)?.name || '';
+            const pb = patients.find(p => p.id === b.patientId)?.name || '';
+            return pa.localeCompare(pb);
         });
-        if (result.invoiceId) {
-            showMsg('Invoice created successfully');
-            setShowAddInvoice(false);
-            setInvoiceForm({ patientId:'', description:'', amount:'' });
-            loadAll();
-        } else {
-            showMsg(result.error || 'Failed to create invoice', 'error');
-        }
-    }
-
-    const filteredPatients = patients.filter(p =>
-        p.name?.toLowerCase().includes(patientSearch.toLowerCase()) ||
-        p.phone?.includes(patientSearch)
-    );
-
-    const filteredInvoices = invoices.filter(inv =>
-        invoiceFilter === 'ALL' || inv.status === invoiceFilter
-    );
-
-    const totalRevenue = invoices.filter(i => i.status === 'PAID').reduce((s, i) => s + i.amount, 0);
-    const pendingCount = invoices.filter(i => i.status === 'PENDING').length;
 
     return (
-        <div className="dashboard">
-            {payingInvoice && (
-                <PaymentModal
-                    invoice={payingInvoice}
-                    patient={patients.find(p => p.id === payingInvoice.patientId)}
-                    onClose={() => setPayingInvoice(null)}
-                    onSuccess={() => { showMsg('Payment confirmed successfully!'); loadAll(); }}
+        <div className="app">
+            {payInv && (
+                <PayModal
+                    inv={payInv}
+                    pat={patients.find(p => p.id === payInv.patientId)}
+                    onClose={() => setPayInv(null)}
+                    onDone={(method) => { flash(`Payment confirmed (${method})`); load(); }}
+                />
+            )}
+            {editPat && (
+                <EditModal
+                    pat={editPat}
+                    onClose={() => setEditPat(null)}
+                    onDone={() => { flash('Patient updated successfully'); load(); }}
                 />
             )}
 
-            <nav className="dash-nav">
-                <div className="dash-logo"><span>M</span> MediCore</div>
-                <div className="dash-tabs">
-                    <button className={`dash-tab ${tab==='patients'?'active':''}`} onClick={() => setTab('patients')}>
-                        👥 Patients <span style={{fontSize:'11px',background:'#e2e8f0',padding:'1px 7px',borderRadius:'20px',marginLeft:'4px'}}>{patients.length}</span>
+            {/* Sidebar */}
+            <aside className="sidebar">
+                <div className="s-logo">Medi<span>Core</span></div>
+                {[
+                    { id: 'patients', label: 'Patients', count: patients.length },
+                    { id: 'invoices', label: 'Invoices', count: invoices.length },
+                ].map(s => (
+                    <button key={s.id} className={`s-btn ${tab === s.id ? 'on' : ''}`}
+                            onClick={() => { setTab(s.id); setShowAdd(false); }}>
+                        <span>{s.ico}</span> {s.label}
+                        <span className="s-count">{s.count}</span>
                     </button>
-                    <button className={`dash-tab ${tab==='invoices'?'active':''}`} onClick={() => setTab('invoices')}>
-                        🧾 Invoices <span style={{fontSize:'11px',background:'#e2e8f0',padding:'1px 7px',borderRadius:'20px',marginLeft:'4px'}}>{invoices.length}</span>
+                ))}
+                <div className="s-bottom">
+                    <button className="s-logout" onClick={() => { localStorage.removeItem('token'); nav('/login'); }}>
+                        ↩ Logout
                     </button>
                 </div>
-                <div className="dash-user">
-                    <button className="btn-logout" onClick={() => { localStorage.removeItem('token'); navigate('/login'); }}>
-                        Logout
-                    </button>
-                </div>
-            </nav>
+            </aside>
 
-            <div className="dash-body">
-                {msg.text && (
-                    <div className={`msg-banner ${msg.type==='error'?'msg-error':'msg-success'}`}>
-                        {msg.text}
-                        <button className="msg-close" onClick={() => setMsg({text:'',type:''})}>✕</button>
+            {/* Main content */}
+            <div className="main-content">
+
+                {/* Message banner */}
+                {msg.t && (
+                    <div className={`msg-bar ${msg.ok ? 'msg-ok' : 'msg-err'}`}>
+                        {msg.t}
+                        <button className="msg-x" onClick={() => setMsg({ t: '', ok: true })}>✕</button>
                     </div>
                 )}
 
                 {/* Stats */}
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{background:'#dbeafe'}}>👥</div>
-                        <div className="stat-label">Total patients</div>
-                        <div className="stat-value">{patients.length}</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{background:'#ede9fe'}}>🧾</div>
-                        <div className="stat-label">Total invoices</div>
-                        <div className="stat-value">{invoices.length}</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{background:'#dcfce7'}}>💰</div>
-                        <div className="stat-label">Total revenue</div>
-                        <div className="stat-value" style={{color:'#16a34a'}}>₹{totalRevenue.toFixed(0)}</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon" style={{background:'#fef9c3'}}>⏳</div>
-                        <div className="stat-label">Pending invoices</div>
-                        <div className="stat-value" style={{color:'#d97706'}}>{pendingCount}</div>
-                    </div>
+                <div className="stats">
+                    {[
+                        { l: 'Patients', v: patients.length },
+                        { l: 'Invoices', v: invoices.length},
+                        { l: 'Revenue', v: `₹${revenue.toFixed(0)}`},
+                        { l: 'Pending', v: pending },
+                    ].map((s, i) => (
+                        <div className="stat-box" key={i}>
+                            <div className="stat-top">
+                                <div className="stat-lbl">{s.l}</div>
+                                <div className="stat-ico">{s.ico}</div>
+                            </div>
+                            <div className="stat-num">{s.v}</div>
+                        </div>
+                    ))}
                 </div>
 
-                {/* PATIENTS */}
+                {/* PATIENTS TAB  */}
                 {tab === 'patients' && (
-                    <div>
-                        <div className="section-header">
-                            <div>
-                                <div className="section-title">Patients</div>
-                                <div className="section-subtitle">{patients.length} registered patients</div>
+                    <div className="card">
+                        {/* Banner */}
+                        <div className="page-banner">
+                            <img
+                                src="https://tse1.mm.bing.net/th/id/OIP.PYm99fUZWeQc4HzoK1iSLgHaDp?r=0&w=1280&h=630&rs=1&pid=ImgDetMain&o=7&rm=3"
+                                alt="Patient registration"
+                            />
+                            <div className="page-banner-overlay">
+                                <div className="page-banner-title">Patient Management</div>
+                                <div className="page-banner-sub">{patients.length} registered · Search, add, edit or delete</div>
                             </div>
-                            <button className="btn-add" onClick={() => setShowAddPatient(!showAddPatient)}>
-                                + Add patient
+                        </div>
+
+                        <div className="card-top">
+                            <div>
+                                <div className="card-title">All patients</div>
+                                <div className="card-sub">{patients.length} registered</div>
+                            </div>
+                            <button className="btn-add" onClick={() => setShowAdd(!showAdd)}>
+                                {showAdd ? '✕ Cancel' : '+ Add patient'}
                             </button>
                         </div>
 
-                        {showAddPatient && (
-                            <div className="form-panel">
-                                <h3>Add new patient</h3>
-                                <div className="form-row">
+                        {showAdd && (
+                            <div className="add-form">
+                                <h3>New patient</h3>
+                                <div className="fg">
+                                    <div><label className="fl">Full name *</label><input className="fi" placeholder="Patient full name" value={pf.name} onChange={e => setPf({ ...pf, name: e.target.value })} /></div>
+                                    <div><label className="fl">Age *</label><input className="fi" type="number" placeholder="Age" value={pf.age} onChange={e => setPf({ ...pf, age: e.target.value })} /></div>
                                     <div>
-                                        <label className="field-label">Full name *</label>
-                                        <input className="field-input" placeholder="Patient full name"
-                                               value={patientForm.name} onChange={e => setPatientForm({...patientForm, name:e.target.value})} />
-                                    </div>
-                                    <div>
-                                        <label className="field-label">Age *</label>
-                                        <input className="field-input" type="number" placeholder="Age"
-                                               value={patientForm.age} onChange={e => setPatientForm({...patientForm, age:e.target.value})} />
-                                    </div>
-                                </div>
-                                <div className="form-row">
-                                    <div>
-                                        <label className="field-label">Gender</label>
-                                        <select className="field-input" value={patientForm.gender}
-                                                onChange={e => setPatientForm({...patientForm, gender:e.target.value})}>
+                                        <label className="fl">Gender</label>
+                                        <select className="fi" value={pf.gender} onChange={e => setPf({ ...pf, gender: e.target.value })}>
                                             <option value="MALE">Male</option>
                                             <option value="FEMALE">Female</option>
                                             <option value="OTHER">Other</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="field-label">Phone *</label>
-                                        <input className="field-input" placeholder="9876543210"
-                                               value={patientForm.phone} onChange={e => setPatientForm({...patientForm, phone:e.target.value})} />
-                                    </div>
+                                    <div><label className="fl">Phone *</label><input className="fi" placeholder="9876543210" value={pf.phone} onChange={e => setPf({ ...pf, phone: e.target.value })} /></div>
+                                    <div><label className="fl">Blood group</label><input className="fi" placeholder="B+" value={pf.bloodGroup} onChange={e => setPf({ ...pf, bloodGroup: e.target.value })} /></div>
+                                    <div><label className="fl">Complaint</label><input className="fi" placeholder="Primary complaint" value={pf.complaint} onChange={e => setPf({ ...pf, complaint: e.target.value })} /></div>
                                 </div>
-                                <div className="form-row">
-                                    <div>
-                                        <label className="field-label">Blood group</label>
-                                        <input className="field-input" placeholder="e.g. B+"
-                                               value={patientForm.bloodGroup} onChange={e => setPatientForm({...patientForm, bloodGroup:e.target.value})} />
-                                    </div>
-                                    <div>
-                                        <label className="field-label">Complaint</label>
-                                        <input className="field-input" placeholder="Primary complaint"
-                                               value={patientForm.complaint} onChange={e => setPatientForm({...patientForm, complaint:e.target.value})} />
-                                    </div>
-                                </div>
-                                <div className="form-actions">
-                                    <button className="btn-save" onClick={handleAddPatient}>Save patient</button>
-                                    <button className="btn-cancel" onClick={() => setShowAddPatient(false)}>Cancel</button>
+                                <div className="fa">
+                                    <button className="btn-sv" onClick={doAddPat}>Save patient</button>
+                                    <button className="btn-cx" onClick={() => setShowAdd(false)}>Cancel</button>
                                 </div>
                             </div>
                         )}
 
-                        <div className="search-bar">
-                            <input className="search-input" placeholder="Search patients by name or phone..."
-                                   value={patientSearch} onChange={e => setPatientSearch(e.target.value)} />
+                        <div className="sbar">
+                            <input className="sinput" placeholder="Search by name or phone..." value={pSearch} onChange={e => setPSearch(e.target.value)} />
                         </div>
 
-                        <div className="data-table-wrap">
-                            <table className="data-table">
-                                <thead>
-                                <tr>
-                                    <th>Patient</th><th>Age</th><th>Gender</th>
-                                    <th>Phone</th><th>Blood</th><th>Complaint</th><th>Actions</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {filteredPatients.length === 0 ? (
-                                    <tr><td colSpan="7">
-                                        <div className="empty-state">
-                                            <h3>{patientSearch ? 'No patients match your search' : 'No patients yet'}</h3>
-                                            <p>{patientSearch ? 'Try a different search term' : 'Add your first patient to get started'}</p>
-                                        </div>
-                                    </td></tr>
-                                ) : filteredPatients.map(p => (
-                                    <tr key={p.id}>
-                                        <td>
-                                            <div className="avatar-cell">
-                                                <div className="avatar">{getInitials(p.name)}</div>
-                                                <div>
-                                                    <div className="avatar-name">{p.name}</div>
-                                                    <div className="avatar-sub">ID: {p.id}</div>
-                                                </div>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Patient</th><th>Age</th><th>Gender</th>
+                                <th>Phone</th><th>Blood</th><th>Complaint</th><th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {fp.length === 0 ? (
+                                <tr><td colSpan="7">
+                                    <div className="empty">
+                                        <h3>{pSearch ? 'No results found' : 'No patients yet'}</h3>
+                                        <p>{pSearch ? 'Try a different search' : 'Add your first patient above'}</p>
+                                    </div>
+                                </td></tr>
+                            ) : fp.map(p => (
+                                <tr key={p.id}>
+                                    <td>
+                                        <div className="nc">
+                                            <div className="av" style={{ background: ac(p.id) }}>{ini(p.name)}</div>
+                                            <div>
+                                                <div className="nm">{p.name}</div>
+                                                <div className="ns">ID #{p.id}</div>
                                             </div>
-                                        </td>
-                                        <td>{p.age} yrs</td>
-                                        <td>
-                        <span className={`badge ${p.gender==='FEMALE'?'badge-female':'badge-male'}`}>
-                          {p.gender}
-                        </span>
-                                        </td>
-                                        <td>{p.phone}</td>
-                                        <td>{p.bloodGroup || <span style={{color:'#cbd5e1'}}>—</span>}</td>
-                                        <td style={{maxWidth:'160px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                            {p.complaint || <span style={{color:'#cbd5e1'}}>—</span>}
-                                        </td>
-                                        <td>
-                                            <button className="btn-delete" onClick={() => handleDeletePatient(p.id, p.name)}>
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                        </div>
+                                    </td>
+                                    <td>{p.age} yrs</td>
+                                    <td><span className={`bm ${p.gender === 'FEMALE' ? 'bm-f' : 'bm-m'}`}>{p.gender}</span></td>
+                                    <td>{p.phone}</td>
+                                    <td>{p.bloodGroup || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+                                    <td style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.complaint || <span style={{ color: '#cbd5e1' }}>—</span>}
+                                    </td>
+                                    <td>
+                                        <button className="btn-e" onClick={() => setEditPat(p)}>Edit</button>
+                                        <button className="btn-d" onClick={() => doDelPat(p.id, p.name)}>Delete</button>
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
 
-                {/* INVOICES */}
+                {/* INVOICES TAB */}
                 {tab === 'invoices' && (
-                    <div>
-                        <div className="section-header">
-                            <div>
-                                <div className="section-title">Invoices</div>
-                                <div className="section-subtitle">{invoices.length} total · {pendingCount} pending</div>
+                    <div className="card">
+                        {/* Banner */}
+                        <div className="page-banner">
+                            <img
+                                src="https://cdn.manomano.com/images/images_products/4388915/P/94984241_3.jpg"
+                                alt="Medical billing"
+                            />
+                            <div className="page-banner-overlay">
+                                <div className="page-banner-title">Invoices & Billing</div>
+                                <div className="page-banner-sub">{invoices.length} total · {pending} pending · ₹{revenue.toFixed(0)} collected</div>
                             </div>
-                            <button className="btn-add" onClick={() => setShowAddInvoice(!showAddInvoice)}>
-                                + Create invoice
+                        </div>
+
+                        <div className="card-top">
+                            <div>
+                                <div className="card-title">All invoices</div>
+                                <div className="card-sub">{invoices.length} total · {pending} pending</div>
+                            </div>
+                            <button className="btn-add" onClick={() => setShowAdd(!showAdd)}>
+                                {showAdd ? '✕ Cancel' : '+ Create invoice'}
                             </button>
                         </div>
 
-                        {showAddInvoice && (
-                            <div className="form-panel">
-                                <h3>Create new invoice</h3>
-                                <div className="form-row single">
+                        {showAdd && (
+                            <div className="add-form">
+                                <h3>New invoice</h3>
+                                <div className="fg" style={{ gridTemplateColumns: '1fr' }}>
                                     <div>
-                                        <label className="field-label">Select patient *</label>
-                                        <select className="field-input" value={invoiceForm.patientId}
-                                                onChange={e => setInvoiceForm({...invoiceForm, patientId:e.target.value})}>
-                                            <option value="">— Choose a patient —</option>
-                                            {patients.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name} — {p.phone}</option>
-                                            ))}
+                                        <label className="fl">Select patient *</label>
+                                        <select className="fi" value={invf.patientId} onChange={e => setInvf({ ...invf, patientId: e.target.value })}>
+                                            <option value="">— Choose patient —</option>
+                                            {patients.map(p => <option key={p.id} value={p.id}>{p.name} — {p.phone}</option>)}
                                         </select>
                                     </div>
                                 </div>
-                                <div className="form-row">
-                                    <div>
-                                        <label className="field-label">Description *</label>
-                                        <input className="field-input" placeholder="e.g. Consultation fee, Lab test"
-                                               value={invoiceForm.description} onChange={e => setInvoiceForm({...invoiceForm, description:e.target.value})} />
-                                    </div>
-                                    <div>
-                                        <label className="field-label">Amount (₹) *</label>
-                                        <input className="field-input" type="number" placeholder="500"
-                                               value={invoiceForm.amount} onChange={e => setInvoiceForm({...invoiceForm, amount:e.target.value})} />
-                                    </div>
+                                <div className="fg">
+                                    <div><label className="fl">Description *</label><input className="fi" placeholder="e.g. Consultation fee" value={invf.description} onChange={e => setInvf({ ...invf, description: e.target.value })} /></div>
+                                    <div><label className="fl">Amount (₹) *</label><input className="fi" type="number" placeholder="500" value={invf.amount} onChange={e => setInvf({ ...invf, amount: e.target.value })} /></div>
                                 </div>
-                                <div className="form-actions">
-                                    <button className="btn-save" onClick={handleAddInvoice}>Create invoice</button>
-                                    <button className="btn-cancel" onClick={() => setShowAddInvoice(false)}>Cancel</button>
+                                <div className="fa">
+                                    <button className="btn-sv" onClick={doAddInv}>Create invoice</button>
+                                    <button className="btn-cx" onClick={() => setShowAdd(false)}>Cancel</button>
                                 </div>
                             </div>
                         )}
 
-                        <div className="search-bar">
-                            <select className="filter-select" value={invoiceFilter}
-                                    onChange={e => setInvoiceFilter(e.target.value)}>
-                                <option value="ALL">All invoices</option>
-                                <option value="PENDING">Pending only</option>
-                                <option value="PAID">Paid only</option>
+                        <div className="sbar">
+                            <input className="sinput" placeholder="Search by patient name..." value={iSearch} onChange={e => setISearch(e.target.value)} />
+                            <select className="sselect" value={iFilter} onChange={e => setIFilter(e.target.value)}>
+                                <option value="ALL">All status</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="PAID">Paid</option>
                             </select>
                         </div>
 
-                        <div className="data-table-wrap">
-                            <table className="data-table">
-                                <thead>
-                                <tr>
-                                    <th>Invoice</th><th>Patient</th><th>Description</th>
-                                    <th>Amount</th><th>Status</th><th>Action</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {filteredInvoices.length === 0 ? (
-                                    <tr><td colSpan="6">
-                                        <div className="empty-state">
-                                            <h3>No invoices found</h3>
-                                            <p>Create an invoice to get started</p>
-                                        </div>
-                                    </td></tr>
-                                ) : filteredInvoices.map(inv => {
-                                    const patient = patients.find(p => p.id === inv.patientId);
-                                    return (
-                                        <tr key={inv.id}>
-                                            <td style={{color:'#94a3b8',fontWeight:'600'}}>#{inv.id}</td>
-                                            <td>
-                                                <div className="avatar-cell">
-                                                    <div className="avatar" style={{width:'28px',height:'28px',fontSize:'10px'}}>
-                                                        {getInitials(patient?.name)}
-                                                    </div>
-                                                    <div className="avatar-name">{patient?.name || `Patient #${inv.patientId}`}</div>
+                        <table>
+                            <thead>
+                            <tr><th>#</th><th>Patient</th><th>Description</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                            {fi.length === 0 ? (
+                                <tr><td colSpan="6">
+                                    <div className="empty">
+                                        <h3>No invoices found</h3>
+                                        <p>Create an invoice above</p>
+                                    </div>
+                                </td></tr>
+                            ) : fi.map(inv => {
+                                const p = patients.find(x => x.id === inv.patientId);
+                                return (
+                                    <tr key={inv.id}>
+                                        <td style={{ color: '#94a3b8', fontWeight: '700' }}>#{inv.id}</td>
+                                        <td>
+                                            <div className="nc">
+                                                <div className="av" style={{ background: ac(inv.patientId), width: '28px', height: '28px', fontSize: '10px' }}>
+                                                    {ini(p?.name)}
                                                 </div>
-                                            </td>
-                                            <td style={{color:'#64748b'}}>{inv.description}</td>
-                                            <td style={{fontWeight:'700',color:'#0f172a'}}>₹{inv.amount}</td>
-                                            <td>
-                          <span className={`badge ${inv.status==='PAID'?'badge-paid':'badge-pending'}`}>
-                            {inv.status==='PAID' ? '✓ Paid' : '⏳ Pending'}
+                                                <div className="nm">{p?.name || `Patient #${inv.patientId}`}</div>
+                                            </div>
+                                        </td>
+                                        <td style={{ color: '#64748b' }}>{inv.description}</td>
+                                        <td style={{ fontWeight: '800' }}>₹{inv.amount}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span className={`bm ${inv.status === 'PAID' ? 'bm-paid' : 'bm-pend'}`}>
+                            {inv.status === 'PAID' ? '✓ Paid' : '⏳ Pending'}
                           </span>
-                                            </td>
-                                            <td>
-                                                {inv.status === 'PENDING' ? (
-                                                    <button className="btn-pay" onClick={() => setPayingInvoice(inv)}>
+                                                {inv.paymentMethod && (
+                                                    <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>
+                              {inv.paymentMethod === 'CASH' ? ' Cash' : ' Online'}
+                            </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                {inv.status === 'PENDING' && (
+                                                    <button className="btn-p" onClick={() => setPayInv(inv)}>
                                                         Pay now
                                                     </button>
-                                                ) : (
-                                                    <span style={{color:'#16a34a',fontSize:'13px',fontWeight:'600'}}>✓ Done</span>
                                                 )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                {inv.status === 'PAID' && (
+                                                    <>
+                                                        <span style={{ color: '#15803d', fontSize: '12px', fontWeight: '700' }}>✓ Done</span>
+                                                        <button
+                                                            onClick={() => printInvoice(inv)}
+                                                            style={{ padding: '5px 10px', background: 'none', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                                                             Print
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
         </div>
     );
 }
-
-export default Dashboard;

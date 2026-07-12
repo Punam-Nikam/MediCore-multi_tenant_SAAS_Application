@@ -3,60 +3,62 @@ import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
 import '../styles/Auth.css';
 
-function Login() {
+export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+    const nav = useNavigate();
 
-    async function handleLogin() {
-        if (!email || !password) { setError('Email and password are required'); return; }
+    async function go() {
+        if (!email || !password) { setError('Enter email and password'); return; }
         setLoading(true); setError('');
-        const result = await login(email, password);
+        const r = await login(email, password);
         setLoading(false);
-        if (result.token) {
-            localStorage.setItem('token', result.token);
-            navigate('/dashboard');
-        } else {
-            setError(result.error || 'Invalid email or password');
-        }
-    }
-
-    function handleKeyDown(e) {
-        if (e.key === 'Enter') handleLogin();
+        if (r.token) { localStorage.setItem('token', r.token); nav('/dashboard'); }
+        else setError(r.error || 'Invalid credentials');
     }
 
     return (
-        <div className="auth-page">
-            <div className="auth-card">
-                <div className="auth-logo"><span>M</span> MediCore</div>
-                <h1 className="auth-title">Welcome back</h1>
-                <p className="auth-subtitle">Sign in to your clinic account</p>
+        <div className="auth-wrap">
+            <div className="auth-left">
+                <img className="auth-left-img"
+                     src="https://media.istockphoto.com/id/1809149078/photo/doctor-in-a-white-coat-logs-into-the-system-using-a-laptop.jpg?s=612x612&w=0&k=20&c=iH1ADm_WE6pmuyVBsm1oeX3y4PvVNH6IL4L_wH3u8Sw="
+                     alt="Reception" />
+                <h2>Welcome to MediCore</h2>
+                <p>Your clinic's complete digital operations platform. Patients, billing and payments — all in one place.</p>
+            </div>
 
-                {error && <div className="auth-error">{error}</div>}
+            <div className="auth-right">
+                <div className="auth-box">
+                    <div className="auth-logo">Medi<b>Core</b></div>
+                    <div className="auth-title">Sign in</div>
+                    <div className="auth-sub">Enter your clinic credentials</div>
 
-                <div className="form-group">
-                    <label className="form-label">Email address</label>
-                    <input className="form-input" type="email" placeholder="clinic@example.com"
-                           value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown} />
+                    {error && <div className="auth-err">{error}</div>}
+
+                    <div className="fld">
+                        <label>Email</label>
+                        <input type="email" placeholder="clinic@example.com"
+                               value={email} onChange={e => setEmail(e.target.value)}
+                               onKeyDown={e => e.key === 'Enter' && go()} />
+                    </div>
+                    <div className="fld">
+                        <label>Password</label>
+                        <input type="password" placeholder="••••••••"
+                               value={password} onChange={e => setPassword(e.target.value)}
+                               onKeyDown={e => e.key === 'Enter' && go()} />
+                    </div>
+
+                    <button className="btn-auth" onClick={go} disabled={loading}>
+                        {loading ? 'Signing in...' : 'Sign in →'}
+                    </button>
+
+                    <div className="auth-switch">
+                        No account? <Link to="/register">Create one free</Link>
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label className="form-label">Password</label>
-                    <input className="form-input" type="password" placeholder="••••••••"
-                           value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown} />
-                </div>
-
-                <button className="btn-full" onClick={handleLogin} disabled={loading}>
-                    {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-
-                <p className="auth-link">
-                    Don't have an account? <Link to="/register">Create one free</Link>
-                </p>
             </div>
         </div>
     );
 }
-
-export default Login;

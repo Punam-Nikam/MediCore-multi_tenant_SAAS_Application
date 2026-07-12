@@ -14,14 +14,18 @@ export async function getInvoices() {
 
 export async function createInvoice(data) {
     const res = await fetch(`${BASE_URL}/api/invoices`, {
-        method: "POST", headers: getHeaders(), body: JSON.stringify(data)
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(data)
     });
     return res.json();
 }
 
 export async function createPayment(invoiceId) {
     const res = await fetch(`${BASE_URL}/api/payments`, {
-        method: "POST", headers: getHeaders(), body: JSON.stringify({ invoiceId })
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ invoiceId })
     });
     return res.json();
 }
@@ -33,6 +37,12 @@ export async function simulateWebhook(orderId) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId })
         });
+
+        if (!signRes.ok) {
+            console.error("Signature endpoint failed:", signRes.status);
+            return { ok: false };
+        }
+
         const { signature } = await signRes.json();
 
         const webhookRes = await fetch(`${BASE_URL}/api/webhook/razorpay`, {
@@ -43,8 +53,10 @@ export async function simulateWebhook(orderId) {
             },
             body: orderId
         });
+
         return { ok: webhookRes.ok };
     } catch (e) {
+        console.error("simulateWebhook error:", e);
         return { ok: false };
     }
 }
