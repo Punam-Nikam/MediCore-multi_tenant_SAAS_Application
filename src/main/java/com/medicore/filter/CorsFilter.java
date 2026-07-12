@@ -18,7 +18,7 @@ public class CorsFilter implements HttpHandler {
         // Allow requests from React frontend
         exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Razorpay-Signature");
         exchange.getResponseHeaders().add("Content-Type", "application/json");
 
         // Handle preflight requests (browser sends OPTIONS before real request)

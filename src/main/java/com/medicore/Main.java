@@ -43,8 +43,8 @@ public class Main
                     new InetSocketAddress(PORT),0
             );
 
-        //step 3 : Register URL routes
-        
+            //step 3 : Register URL routes
+
             server.createContext("/api/register", new CorsFilter(new AuthHandler()));
             server.createContext("/api/login", new CorsFilter(new LoginHandler()));
             server.createContext("/api/patients", new CorsFilter(new SecuredHandler(new PatientHandler())));
@@ -53,12 +53,12 @@ public class Main
             server.createContext("/api/webhook/razorpay", new CorsFilter(new WebhookHandler()));
             server.createContext("/api/webhook/sign", new CorsFilter(new SignatureHandler()));
 
-        //step 4 : Give server a thread pool
-        //each request gets its own thread from this pool
+            //step 4 : Give server a thread pool
+            //each request gets its own thread from this pool
 
-        server.setExecutor(Executors.newFixedThreadPool(10));
+            server.setExecutor(Executors.newFixedThreadPool(10));
 
-        //step 5 : start server
+            //step 5 : start server
             server.start();
 
             System.out.println("MediCore running on port : "+PORT);

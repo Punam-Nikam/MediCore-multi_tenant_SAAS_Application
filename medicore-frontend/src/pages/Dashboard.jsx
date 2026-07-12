@@ -19,75 +19,78 @@ function PayModal({ inv, pat, onClose, onDone }) {
     const [stage, setStage] = useState('confirm');
     const [loading, setLoading] = useState(false);
 
-    async function payOnline() {
-        setLoading(true);
-        try {
-            const r = await createPayment(inv.id);
-            if (!r.orderId) { alert('Could not create payment order — check backend console'); setLoading(false); return; }
-            const w = await simulateWebhook(r.orderId);
-            if (w.ok) { setStage('done'); setTimeout(() => { onDone('online'); onClose(); }, 1800); }
-            else alert('Payment simulation failed — check if /api/webhook/sign is registered in Main.java');
-        } catch (e) {
-            alert('Network error: ' + e.message);
+    function PayModal({ inv, pat, onClose, onDone }) {
+        const [stage, setStage] = useState('confirm');
+        const [loading, setLoading] = useState(false);
+
+        async function payOnline() {
+            setLoading(true);
+            try {
+                const r = await createPayment(inv.id);
+                if (!r.orderId) { alert('Could not create payment order — check backend console'); setLoading(false); return; }
+                const w = await simulateWebhook(r.orderId);
+                if (w.ok) { setStage('done'); setTimeout(() => { onDone('online'); onClose(); }, 1800); }
+                else alert('Payment simulation failed — check if /api/webhook/sign is registered in Main.java');
+            } catch (e) {
+                alert('Network error: ' + e.message);
+            }
+            setLoading(false);
         }
-        setLoading(false);
-    }
 
-    async function payCash() {
-        setLoading(true);
-        try {
-            const res = await fetch(`${BASE}/api/invoices/${inv.id}/cash-paid`, {
-                method: 'POST', headers: gh()
-            });
-            const data = await res.json();
-            if (data.message) { setStage('done'); setTimeout(() => { onDone('cash'); onClose(); }, 1800); }
-            else alert(data.error || 'Failed to mark as cash paid');
-        } catch (e) {
-            alert('Network error: ' + e.message);
+        async function payCash() {
+            setLoading(true);
+            try {
+                const res = await fetch(`${BASE}/api/invoices/${inv.id}/cash-paid`, {
+                    method: 'POST', headers: gh()
+                });
+                const data = await res.json();
+                if (data.message) { setStage('done'); setTimeout(() => { onDone('cash'); onClose(); }, 1800); }
+                else alert(data.error || 'Failed to mark as cash paid');
+            } catch (e) {
+                alert('Network error: ' + e.message);
+            }
+            setLoading(false);
         }
-        setLoading(false);
-    }
 
-    return (
-        <div className="ov" onClick={onClose}>
-            <div className="mod" onClick={e => e.stopPropagation()}>
-                {stage === 'confirm' ? (
-                    <>
-
-                        <div className="mod-t">Complete your payment</div>
-                        <div className="mod-s">Choose payment method for this invoice</div>
-                        <div className="mod-rows">
-                            <div className="mod-row"><span className="mod-rl">Patient</span><span className="mod-rv">{pat?.name || '—'}</span></div>
-                            <div className="mod-row"><span className="mod-rl">Invoice #</span><span className="mod-rv">{inv.id}</span></div>
-                            <div className="mod-row"><span className="mod-rl">Description</span><span className="mod-rv">{inv.description}</span></div>
+        return (
+            <div className="ov" onClick={onClose}>
+                <div className="mod" onClick={e => e.stopPropagation()}>
+                    {stage === 'confirm' ? (
+                        <>
+                            <div className="mod-t">Complete payment</div>
+                            <div className="mod-s">Choose payment method for this invoice</div>
+                            <div className="mod-rows">
+                                <div className="mod-row"><span className="mod-rl">Patient</span><span className="mod-rv">{pat?.name || '—'}</span></div>
+                                <div className="mod-row"><span className="mod-rl">Invoice #</span><span className="mod-rv">{inv.id}</span></div>
+                                <div className="mod-row"><span className="mod-rl">Description</span><span className="mod-rv">{inv.description}</span></div>
+                            </div>
+                            <div className="mod-amt">
+                                <div className="mod-amt-l">Total amount</div>
+                                <div className="mod-amt-v">₹{inv.amount}</div>
+                            </div>
+                            <div style={{ marginBottom: '10px' }}>
+                                <button className="mod-ok" onClick={payOnline} disabled={loading}
+                                        style={{ width: '100%', marginBottom: '8px', background: '#3b82f6' }}>
+                                    {loading ? 'Processing...' : ' Pay online (simulated)'}
+                                </button>
+                                <button className="mod-ok" onClick={payCash} disabled={loading}
+                                        style={{ width: '100%', background: '#16a34a' }}>
+                                    {loading ? 'Processing...' : ' Mark as cash paid'}
+                                </button>
+                            </div>
+                            <button className="mod-cx" onClick={onClose} style={{ width: '100%' }}>Cancel</button>
+                        </>
+                    ) : (
+                        <div className="suc">
+                            <div className="suc-t">Payment confirmed!</div>
+                            <div className="suc-s">Invoice #{inv.id} is now marked as PAID</div>
                         </div>
-                        <div className="mod-amt">
-                            <div className="mod-amt-l">Total amount</div>
-                            <div className="mod-amt-v">₹{inv.amount}</div>
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <button className="mod-ok" onClick={payOnline} disabled={loading}
-                                    style={{ width: '100%', marginBottom: '8px', background: '#3b82f6' }}>
-                                {loading ? 'Processing...' : ' Pay online(Razorpay Payment)'}
-                            </button>
-                            <button className="mod-ok" onClick={payCash} disabled={loading}
-                                    style={{ width: '100%', background: '#16a34a' }}>
-                                {loading ? 'Processing...' : ' Pay by Cash'}
-                            </button>
-                        </div>
-                        <button className="mod-cx" onClick={onClose} style={{ width: '100%' }}>Cancel</button>
-                    </>
-                ) : (
-                    <div className="suc">
-
-                        <div className="suc-t">Payment confirmed!</div>
-                        <div className="suc-s">Invoice #{inv.id} is now marked as PAID</div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
+
 
 // Edit Modal
 function EditModal({ pat, onClose, onDone }) {
@@ -550,7 +553,7 @@ export default function Dashboard() {
                                                         <button
                                                             onClick={() => printInvoice(inv)}
                                                             style={{ padding: '5px 10px', background: 'none', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                                                             Print
+                                                            Print
                                                         </button>
                                                     </>
                                                 )}
