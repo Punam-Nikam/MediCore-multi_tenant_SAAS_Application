@@ -18,7 +18,7 @@ import com.medicore.filter.CorsFilter;
 
 public class Main
 {
-    // Port number — where our server listens
+
     private static final int PORT = 8080;
 
     public static void main(String[] args) {
@@ -44,7 +44,7 @@ public class Main
             );
 
         //step 3 : Register URL routes
-        //we add handlers here as we build them
+        
             server.createContext("/api/register", new CorsFilter(new AuthHandler()));
             server.createContext("/api/login", new CorsFilter(new LoginHandler()));
             server.createContext("/api/patients", new CorsFilter(new SecuredHandler(new PatientHandler())));
