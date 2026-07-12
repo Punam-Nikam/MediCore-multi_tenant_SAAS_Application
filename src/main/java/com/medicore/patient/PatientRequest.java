@@ -1,5 +1,6 @@
 package com.medicore.patient;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PatientRequest
 {
     private String name;
